@@ -42,7 +42,7 @@ def get_score_summary(filename):
         boro = line[1]
         grade = line[10]
         if camisid not in dedupe and grade in GRADING_SCALE:
-            dedupe.update({camisid: [grade, boro]})
+            dedupe[camisid] = [grade, boro]
 
     fhandler.close()
 
@@ -100,20 +100,40 @@ def get_market_density(filename):
 
 
 def correlate_data(restdata, mktsdata, output):
-    """Docstring."""
+    """Combines data from two files and combines them into one.
+
+    Args:
+        restdata(string): The inspection_results.csv filename containing New
+        York City restaurant grades.
+        mktsdata (string): The green_markets.json filename containing New York
+        City green markets locations.
+        output(string): The name of the file as a string which the combined data
+        will be dumped into.
+
+    Returns:
+        output(file): A text file containing the combined data as a dictionary.
+        File is created in the directory the python file is located in.
+
+    Example:
+        >>> correlate_data('inspection_results.csv', 'green_markets.json',
+        'output')
+        >>>
+    """
     restscore = get_score_summary(restdata)
     greenmkts = get_market_density(mktsdata)
     correlate = {}
-    for key, value in restscore.items():
-        borough = key
-        foodscore = value[1]
-        restaurants = value[0]
-        if key not in correlate:
-            correlate[borough] = (foodscore, restaurants)
-    # print correlate
 
-    for key1, value1 in greenmkts.items():
-        markets = value1
-        if key1 in correlate:
-            correlate[borough] = (foodscore, float(markets)/restaurants)
-    return correlate
+    fhandler = open(output, 'w')
+
+    dictlist = [restscore, greenmkts]
+    for key in restscore.iterkeys():
+        correlate[key] = tuple(correlate[key] for correlate in dictlist)
+
+    combined = {}
+    for key, value in correlate.iteritems():
+        if key not in combined:
+            combined[key] = (value[0][1], (float(value[1])/value[0][0]))
+
+    json.dump(combined, fhandler)
+
+    fhandler.close()
